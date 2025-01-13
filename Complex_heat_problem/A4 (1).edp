@@ -1,0 +1,90 @@
+load "medit" 
+
+border C1 (t = 0, 5) {x = t; y = 0; label = 4;}
+border C4 (t = 0, 1) {x = 5; y = t; label = 2;}
+border C2 (t = 0, 5) {x = 5-t; y = 1; label = 3;}
+border C3 (t = 0, 1) {x = 0; y = 1-t; label = 1;}
+
+
+mesh Th = buildmesh (C1(100) + C2(100) + C3(20) + C4(20));
+
+medit("mesh", Th, wait = 1);
+
+fespace Vh(Th, RT0);
+Vh [tetta, atta], [prevTetta, prevAtta], [phi, psi];
+fespace Kh(Th, P0);
+Kh Energy, Energy1;
+
+int n = 100;
+real ka = 0.001, sigma = 5.6704, TMax = 500, A = 1;
+real k = 0.1;
+real a = 0.92;
+real b =  18.7;
+real alpha = 3.33;
+real[int] v = [(9.0), (0.0)];
+real[int] nVector = [(1.0), (0.0)];
+
+func real BigTetta(int boundary) {
+    if (boundary == 1) {
+        return 0.3;
+    }
+    if (boundary == 2)  {
+        return 0.8;
+    }
+
+    return 1;
+}
+
+func real dot(real[int] vec1, real[int] vec2) {
+    return vec1[0]*vec2[0] + vec1[1]*vec2[1];
+}
+
+real parametrAlpha = 1;
+
+real Gamma = 10;
+real Betta = 0.5;
+real epsilon = 0.5;
+
+for (int k = 0; k <= n; k++)
+{
+
+            solve Poisson(tetta, atta) = 
+        int2d(Th)(a*(dx(tetta)*dx(atta) + dy(tetta)*dy(atta)))
+        + int2d(Th)(dot(v[0]*dx(tetta)*atta + v[1]*dy(tetta), atta))
+        + int2d(Th)(b*ka*prevTetta^4*atta)
+        - int2d(Th)(phi*atta*b*ka)
+
+        + int1d(Th, 1)(Gamma*tetta*atta)
+        - int1d(Th, 1)(Gamma*BigTetta(1)*atta)
+
+        + int1d(Th, 2)(Gamma*tetta*atta)
+        - int1d(Th, 2)(Gamma*BigTetta(2)*atta)
+        
+        + int1d(Th, 3)(Gamma*tetta*atta)
+        - int1d(Th, 3)(Gamma*atta)
+
+        + int1d(Th, 4)(Gamma*tetta*atta)
+        - int1d(Th, 4)(Gamma*atta);
+
+    prevTetta = tetta;
+        
+            solve Poisso(phi, psi) = 
+        int2d(Th)(alpha*(dx(phi)*dx(psi) + dy(phi)*dy(psi)))
+
+        + int2d(Th)(dot(ka*phi, psi))
+        - int2d(Th)(dot(ka* tetta^4, psi))
+
+        + int1d(Th, 1)(Betta*phi*psi)
+        - int1d(Th, 1)(Betta*(BigTetta(1))^4*psi)
+
+        + int1d(Th, 2)(Betta*phi*psi)
+        - int1d(Th, 2)(Betta*(BigTetta(2))^4*psi)
+
+        + int1d(Th, 3)((epsilon/(2*(2 - epsilon)))*phi*psi)
+        - int1d(Th, 3)((epsilon/(2*(2 - epsilon)))*psi)
+
+        + int1d(Th, 4)((epsilon/(2*(2 - epsilon)))*phi*psi)
+        - int1d(Th, 4)((epsilon/(2*(2 - epsilon)))*psi);
+    
+    plot(tetta, wait=0, value = true, fill = true);
+}

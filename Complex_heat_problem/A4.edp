@@ -1,0 +1,75 @@
+load "medit" 
+
+border C1 (t = 0, 50) {x = t; y = 0; label = 1;}
+border C2 (t = 0, 10) {x = 50; y = t; label = 2;}
+border C3 (t = 0, 50) {x = 50 - t; y = 10; label = 3;}
+border C4 (t = 0, 10) {x = 0; y = 10 - t; label = 4;}
+
+mesh Th = buildmesh (C1(50) + C2(10) + C3(50) + C4(10));
+
+//medit("mesh", Th, wait = 1);
+
+fespace Vh(Th,P1);
+Vh tetta, atta, prevTetta;
+Vh phi, psi, prevPhi;
+
+// Constants 
+int n = 10;
+real ka = 0.001, sigma = 5.6704, refractiveIndex = 0.5, TMax = 500, A = 1;
+real k = 0.1;
+real a = 0.92;
+real b =  18.7;
+real alpha = 3.33;
+real[int] v = [9.0, 0.0];
+real[int] nVector = [1.0, 0.0];
+real betta = 0.1;
+real gamma = 1000;
+
+func real BigTetta(real x, real y) {
+    return 1;
+}
+func real dot(real[int] vec1, real[int] vec2) {
+    return vec1[0]*vec2[0] + vec1[1]*vec2[1];
+}
+
+func real E(real epsilon) {
+    return (epsilon/(2*(2 - epsilon)));
+}
+
+real epsilon = 0.0001;
+real parametrAlpha = 1;
+
+prevTetta = 0;
+phi = 0;
+prevPhi = 0;
+
+for (int k = 0; k <= n; k++) {
+    solve Poisson(tetta, atta) = 
+        int2d(Th)(a*dx(tetta)*dx(atta) + a*dy(tetta)*dy(atta))
+        + int2d(Th)(v[0]*dx(tetta)*atta + v[1]*dy(tetta)*atta)
+        + int2d(Th)(b*ka*prevTetta^4*atta)
+        - int2d(Th)(phi*atta)
+        + int1d(Th, 1)(gamma*tetta*atta)
+        - int1d(Th, 1)(gamma*0.3*atta)
+        + int1d(Th, 2)(gamma*tetta*atta)
+        - int1d(Th, 2)(gamma*0.8*atta)
+        + int1d(Th, 3)(gamma*tetta*atta)
+        - int1d(Th, 3)(gamma*E(epsilon)*atta);
+
+    solve Poisso(phi, psi) = 
+        int2d(Th)(alpha*(dx(phi)*dx(psi) + dy(phi)*dy(psi)))
+        + int2d(Th)(ka*phi*psi)
+        - int2d(Th)(ka* tetta^4 *psi)
+        + int1d(Th, 1)(betta*phi*psi)
+        - int1d(Th, 1)(betta*(0.3)^4*psi)
+        + int1d(Th, 2)(betta*phi*psi)
+        - int1d(Th, 2)(betta*(0.8)^4*psi)
+        + int1d(Th, 3)(E(epsilon)*phi*psi)
+        - int1d(Th, 3)(E(epsilon)*psi);
+
+    plot(tetta, wait=0, value = true, fill = true);
+    prevPhi = parametrAlpha*phi + (1 - parametrAlpha)*prevPhi;
+    prevTetta = tetta; // Обновляем значение prevTetta
+}
+
+plot(tetta, wait=true, value=true, fill=true);

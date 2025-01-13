@@ -1,0 +1,68 @@
+load "medit" 
+
+border C1 (t = 0,        2.*pi/3.) {x=cos(t); y=sin(t); label = 1;}
+border C2 (t = 2.*pi/3., 4.*pi/3.) {x=cos(t); y=sin(t); label = 2;}
+border C3 (t = 4.*pi/3., 2*pi    ) {x=cos(t); y=sin(t); label = 3;}
+
+mesh Th0 = buildmesh (C1(15) + C2(15) + C3(15) );
+
+//medit("mesh", Th0, wait = 1);
+
+
+
+
+
+
+
+
+
+border C01(t = 0, 	2*pi    ) {x= 0.5+0.1*cos(t); y=0.1*sin(t); label = 4;}
+border C02(t = 0, 	2*pi    ) {x=-0.5+0.1*cos(t); y=0.1*sin(t); label = 4;}
+border C03(t = 0, 	2*pi    ) {x= 0.1*cos(t); y=0.5+0.1*sin(t); label = 4;}
+
+mesh Th  = buildmesh (C1(15) + C2(15) + C3(15) + C01(24) + C02(24) + C03(24));
+
+medit("mesh", Th,  wait = 1);
+
+
+
+
+real a = 1, b = 1000, ub = 0., tau = 0.1, t = 0.0;
+int n = 10;
+
+func real f1(real x, real y){
+
+if(((x-0.5)^2 + y^2) < 0.01) return 10.;
+return 0.;
+}
+
+
+
+
+fespace Vh(Th,P1);
+Vh u,v, prevU, nextU;
+
+fespace Ph(Th,P0);
+Ph f2;
+
+f2 = 10.*((x+0.5)^2 + y^2 < 0.01) + 10.*(x^2 + (y-0.5)^2 < 0.01);
+
+prevU = u;
+for (int k = 0; k <= n; k++)
+{
+    t += tau;
+    solve Poisson(u, v) = int2d(Th)(u*v)
+        - int2d(Th)(prevU*v)
+        + (int2d(Th)(tau*a*dx(u)*dx(v) + tau*a*dy(u)*dy(v))) - int2d(Th)(tau*f1(x,y)*v) - int2d(Th)(tau*f2*v)
+        + (int1d(Th,3)(tau*b*u*v)  - int1d(Th,3)(tau*b*ub*v))
+        + on(1, u=0.1);
+    plot(u, wait=true, value = true, fill = true);
+    prevU = u;
+}
+
+/*solve Poisson(u,v) = int2d(Th)(a*dx(u)*dx(v) + a*dy(u)*dy(v)) - int2d(Th)(f1(x,y)*v) - int2d(Th)(f2*v)
+                   + int1d(Th,3)(b*u*v)  - int1d(Th,3)(b*ub*v) 
+                   + on(1, u=0.1);
+
+
+plot(u, wait=true, value=true, fill=true);*/ 
